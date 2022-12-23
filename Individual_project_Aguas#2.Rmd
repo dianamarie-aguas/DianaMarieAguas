@@ -1,0 +1,136 @@
+---
+title: 'Individual Project #2'
+author: "Diana Marie Aguas"
+date: "2022-12-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=TRUE}
+
+library(wordcloud)
+library(plotly)
+library(tm)
+library(dplyr)
+library(RColorBrewer)
+library(ggplot2)
+library(twitteR)
+```
+
+Set up credentials
+```{r, include=TRUE}
+CONSUMER_SECRET <- "EmH5TYf5X0vYCiKwxb8GaCCwZ2DR7094qMA9hb4tXjdoE4W27A"
+CONSUMER_KEY <- "Az08rualcz9xPB2uAA3bDRftn"
+ACCESS_SECRET <- "gYDcMWu6JQLMR7wT3osJq6itQD9YXHek9r44wp8tOo0pT"
+ACCESS_TOKEN <- "1595060341146234880-s3E81fGpab6vA3xWJIPhpVAu7DTP8h"
+```
+
+Connect to twitter
+```{r, include=TRUE}
+setup_twitter_oauth(consumer_key = CONSUMER_KEY,
+                    consumer_secret = CONSUMER_SECRET,
+                    access_token = ACCESS_TOKEN,
+                    access_secret = ACCESS_SECRET)
+```
+
+Get 10000 observations "excluding retweets
+```{r, include=TRUE}
+trendingtweets <- searchTwitter("Seventeen",
+                                n = 10000,
+                                lang = "en",
+                                since = "2022-12-10",
+                                until = "2022-12-17",
+                                retryOnRateLimit=120)
+```
+
+list to data frame
+```{r, include=TRUE}
+seven10DF <- twListToDF(trendingtweets)
+```
+
+save & load data
+```{r, include=TRUE}
+save(seven10DF, file = "seven10DF.Rdata")
+load(file = "seven10DF.Rdata")
+```
+
+check missing values
+```{r, include=TRUE}
+missingval <- sapply(seven10DF, function(x) sum(is.na(x)))
+missingval
+```
+
+subsetting
+```{r, include=TRUE}
+seventeen <- seven10DF %>%
+  select(screenName,text,created, isRetweet) %>% filter(isRetweet == FALSE)
+save(seventeen, file = "seventeenDF.Rdata")
+load(file = "seventeenDF.Rdata")
+```
+
+grouping
+```{r, include=TRUE}
+seventeen %>% 
+  group_by(1) %>%
+  summarise(max = max(created), min = min(created))
+
+grp1 <- seventeen %>%  mutate(Created_At_Round = created %>% round(units = 'hours') %>% as.POSIXct())
+grp1
+
+seventeen %>% pull(created) %>% min()
+seventeen %>% pull(created) %>% max()
+```
+
+plotting ggplot() & plotly()
+```{r, include=TRUE}
+ggplot(data = seventeen, aes(x = created)) + geom_histogram(aes(fill = ..count..)) +
+  theme(legend.position = "right") + xlab("Time") + ylab("Number of Tweets") +
+  scale_fill_gradient(low = "green", high = "pink")
+```
+
+```{r, include=TRUE}
+gpltly <- grp1 %>%
+  dplyr::count(Created_At_Round) %>%
+  ggplot(mapping = aes(x = Created_At_Round, y = n)) + theme_light() +
+  geom_line() + xlab(label = 'Date') + ylab(label = NULL) +
+  ggtitle(label = 'Number of Tweets Per Hour')
+gpltly %>% ggplotly()
+```
+
+rts
+```{r, include=TRUE}
+svnteen1 <- seven10DF %>%
+  select(screenName,text,created, isRetweet) %>% filter(isRetweet == TRUE)
+```
+
+group 2
+```{r, include=TRUE}
+svnteen1 %>%  
+  group_by(1) %>%  
+  summarise(max = max(created), min = min(created))
+
+grp2 <- svnteen1 %>%  mutate(Created_At_Round = created %>% round(units = 'hours') %>% as.POSIXct())
+grp2
+
+svnteen1 %>% pull(created) %>% min()
+svnteen1 %>% pull(created) %>% max()
+```
+
+plotting ggplot() & plotly()
+```{r, include=TRUE}
+ggplot(data = grp2, aes(x = created)) + geom_histogram(aes(fill = ..count..)) +
+  theme(legend.position = "right") + xlab("Time") + ylab("Number of Tweets") +
+  scale_fill_gradient(low = "pink", high = "maroon")
+```
+
+```{r, include=TRUE}
+pltly <- grp2 %>%
+  dplyr::count(Created_At_Round) %>%
+  ggplot(mapping = aes(x = Created_At_Round, y = n)) + theme_light() +
+  geom_line() + xlab(label = 'Date') + ylab(label = NULL) +
+  ggtitle(label = 'Number of Tweets Per Hour')
+pltly %>% ggplotly()
+```
